@@ -38,7 +38,7 @@
 
 /* -- ПРОТОКОЛ --- */
 
-#define PACKAGE_SIZE 5
+#define PACKAGE_SIZE 8
 #define MAGIC_BYTE   0xF4
 
 #define _P_STARTUP       0x01
@@ -102,8 +102,10 @@ void setup()
 
 void loop()
 {
-  byte package[PACKAGE_SIZE];
-  byte package_crc = 0;
+  uint8_t package[PACKAGE_SIZE];
+
+  uint16_t given_crc = 0;
+  uint16_t calc_crc = 0;
 
   // Ожидаем, пока прогреется датчик и калибруем
   if (mq135.heatingCompleted() && !mq135.isCalibrated())
@@ -131,12 +133,13 @@ void loop()
     return;
   }
 
-  package_crc = calculate_crc(package);
+  given_crc = (((unsigned int)package[PACKAGE_SIZE - 1]) << 8) | package[PACKAGE_SIZE - 2];
+  calc_crc = calculate_crc(package);
 
   // Проверяем контрольную сумму
-  if (package[PACKAGE_SIZE - 1] != package_crc)
+  if (given_crc != calc_crc)
   {
-    Serial.println("CRC error. Give " + String(package[PACKAGE_SIZE - 1]) + ", expected " + String(package_crc));
+    Serial.println("CRC error. Give " + String(given_crc) + ", expected " + String(calc_crc));
     return;
   }
 
@@ -147,23 +150,29 @@ void loop()
 
 /* -- ЛОГИКА --- */
 
-byte send_package(byte cmd, int value)
+void send_package(uint8_t cmd, uint32_t value)
 {
-  byte package[PACKAGE_SIZE + 2] = {MAGIC_BYTE, cmd, 0x00, 0x00, 0x00, 0x0A, 0x0D};
+  uint8_t package[PACKAGE_SIZE + 2] = {MAGIC_BYTE, cmd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0D};
+  uint16_t crc = 0;
 
-  package[2] = value & 0xFF;
-  package[3] = value & 0xFF00;
+  package[2] = value & 0x000000FF;
+  package[3] = value & 0x0000FF00;
+  package[4] = value & 0x00FF0000;
+  package[5] = value & 0xFF000000;
 
-  package[PACKAGE_SIZE - 1] = calculate_crc(package);
+  crc = calculate_crc(package);
+
+  package[6] = value & 0x00FF;
+  package[7] = value & 0xFF00;
 
   Serial.write(package, PACKAGE_SIZE + 2);
 }
 
-byte calculate_crc(byte package[])
+uint16_t calculate_crc(uint8_t package[])
 {
-  byte crc = 0;
+  uint16_t crc = 0;
 
-  for (int i = 1; i < (PACKAGE_SIZE - 1); i++)
+  for (uint32_t i = 1; i < (PACKAGE_SIZE - 1); i++)
   {
     crc += package[i];
   }
@@ -171,10 +180,10 @@ byte calculate_crc(byte package[])
   return crc;
 }
 
-void handle_request(byte package[])
+void handle_request(uint8_t package[])
 {
-  byte cmd = package[1];
-  int value = 0;
+  uint8_t cmd = package[1];
+  uint32_t value = 0;
 
   if (cmd == _P_REQ_CO2)
   {
