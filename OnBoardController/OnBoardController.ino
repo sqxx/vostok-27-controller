@@ -45,7 +45,7 @@
 #define _P_INIT_COMPLETE 0x02
 #define _P_NOT_READY     0x03
 #define _P_PRESSURE_LOSS 0x04
-#define _P_UNKONOWN_CMD  0x0F
+#define _P_UNKNOWN_CMD   0x0F
 
 #define _P_REQ_CO2  0xA1  // CO2 (ppm)
 #define _P_REQ_HUM  0xA2  // Влажность (%)
@@ -195,6 +195,11 @@ void handle_request(byte package[])
   else if (cmd == _P_REQ_PRES)
   {
     value = FLOAT_TO_INT(bar.readPressureMillibars());
+  }
+  else
+  {
+    cmd = _P_UNKNOWN_CMD;
+    value = 0;
   }
 
   send_package(cmd, value);
