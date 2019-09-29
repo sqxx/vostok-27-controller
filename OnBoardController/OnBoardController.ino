@@ -132,7 +132,7 @@ void setup()
 void loop()
 {
   handle_time();
-  
+
   uint8_t package[PACKAGE_SIZE];
 
   uint16_t given_crc = 0;
@@ -209,7 +209,7 @@ void init_time()
     int Hour, Min, Sec;
 
     sscanf(__TIME__, "%d:%d:%d", &Hour, &Min, &Sec);
-    
+
     tm.Hour = Hour;
     tm.Minute = Min;
     tm.Second = Sec;
@@ -226,7 +226,7 @@ void handle_time()
 
   int ts = (tm.Hour * 60 * 60) + (tm.Minute * 60) + tm.Second;
 
-  if (day_timestamp <= ts &&ts <= night_timestamp)
+  if (day_timestamp <= ts && ts <= night_timestamp)
   {
     if (light_active)
     {
@@ -235,7 +235,7 @@ void handle_time()
     }
   }
   else
-  {   
+  {
     if (!light_active)
     {
       digitalWrite(PIN_LIGHT, HIGH);
@@ -396,14 +396,14 @@ void handle_time_request(uint8_t package[])
   if (cmd == _P_SET_TIME)
   {
     tmElements_t tm;
-    
+
     tm.Second = given_value % 60;
     tm.Minute = given_value / 60 % 60;
     tm.Hour   = given_value / 3600 % 24;
     tm.Day   = 1;
     tm.Month = 1;
     tm.Year  = 1970;
-    
+
     RTC.write(tm);
   }
   else if (cmd == _P_SET_DAY_TIME)
