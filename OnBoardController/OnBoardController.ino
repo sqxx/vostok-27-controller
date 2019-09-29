@@ -10,6 +10,9 @@
 
 /* -- Библиотеки --- */
 
+#include <Wire.h>
+#include <TimeLib.h>
+#include <DS1307RTC.h>
 #include <EEPROM.h>
 #include <TroykaMQ.h>
 #include <TroykaIMU.h>
@@ -37,14 +40,17 @@
 
 #define PIN_SOLAR_PANEL_LEFT  A1
 #define PIN_SOLAR_PANEL_RIGHT A2
+
 #define PIN_PROD_CO2          0
 #define PIN_OXYGEN_SUPPLY     0
 #define PIN_PRES_RELIEF_VALVE 0
 
+#define PIN_LIGHT             0
+
 #define _MA_STATE  0x00
 #define _MA_STATE_INITIALIZED 0xAABBCCDD
-#define _MA_DAY_TIME   (MEM_STATE + sizeof(uint32_t))
-#define _MA_NIGHT_TIME (MEM_DAY_TIME + sizeof(uint32_t))
+#define _MA_DAY_TIME   (_MA_STATE + sizeof(uint32_t))
+#define _MA_NIGHT_TIME (_MA_DAY_TIME + sizeof(uint32_t))
 
 
 /* -- ПРОТОКОЛ --- */
@@ -97,6 +103,9 @@ bool prod_co2_active = false;
 bool oxygen_supply_active = false;
 bool pres_relief_valve_active = false;
 
+uint32_t time_day = 0x00;
+uint32_t time_night = 0x00;
+
 /* -- MAIN & LOOP --- */
 
 void setup()
@@ -112,6 +121,9 @@ void setup()
   mq135.heaterPwrHigh();
   dht.begin();
   bar.begin();
+
+  init_eeprom();
+  init_time();
 
   send_package(_P_INIT_COMPLETE, 0);
 }
@@ -166,19 +178,57 @@ void loop()
 
 /* -- ЛОГИКА --- */
 
+void init_eeprom()
+{
+  uint32_t crc = 0x00;
+  EEPROM.get(_MA_STATE, crc);
+
+  if (crc == _MA_STATE_INITIALIZED)
+  {
+    EEPROM.get(_MA_DAY_TIME, time_day);
+    EEPROM.get(_MA_NIGHT_TIME, time_night);
+  }
+  else
+  {
+    EEPROM.put(_MA_DAY_TIME, 0x00);
+    EEPROM.put(_MA_NIGHT_TIME, 0x00);
+
+    EEPROM.put(_MA_STATE, _MA_STATE_INITIALIZED);
+  }
+}
+
+void init_time()
+{
+  tmElements_t tm;
+
+  if (!RTC.read(tm))
+  {
+    int Hour, Min, Sec;
+
+    sscanf(__TIME__, "%d:%d:%d", &Hour, &Min, &Sec);
+    
+    tm.Hour = Hour;
+    tm.Minute = Min;
+    tm.Second = Sec;
+    tm.Day   = 1;
+    tm.Month = 1;
+    tm.Year  = 1970;
+  }
+}
+
 void send_package(uint8_t cmd, uint32_t value)
 {
   uint8_t package[PACKAGE_SIZE + 2] = {MAGIC_BYTE, cmd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0D};
   uint16_t crc = 0;
 
-  package[2] = (value & 0x000000FF) >> 0;
+  package[2] = (value & 0x000000FF);
   package[3] = (value & 0x0000FF00) >> 8;
   package[4] = (value & 0x00FF0000) >> 16;
   package[5] = (value & 0xFF000000) >> 24;
 
   crc = calculate_crc(package);
 
-  package[6] = (value & 0x00FF) >> 0;
+  package[6] = (value & 0x00FF);
   package[7] = (value & 0xFF00) >> 8;
 
   Serial.write(package, PACKAGE_SIZE + 2);
@@ -188,7 +238,7 @@ uint16_t calculate_crc(uint8_t package[])
 {
   uint16_t crc = 0;
 
-  for (uint32_t i = 1; i < (PACKAGE_SIZE - 1); i++)
+  for (uint32_t i = 1; i < (PACKAGE_SIZE - 2); i++)
   {
     crc += package[i];
   }
@@ -266,7 +316,7 @@ void handle_commands_request(uint8_t package[])
   if (cmd == _P_SWITCH_PRES_RELIEF_VALVE)
   {
     pres_relief_valve_active = !pres_relief_valve_active;
-    
+
     digitalWrite(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active ? HIGH : LOW);
     value = pres_relief_valve_active ? 0xFF : 0x00;
   }
@@ -277,7 +327,7 @@ void handle_commands_request(uint8_t package[])
   else if (cmd == _P_SWITCH_OXYGEN_SUPPLY)
   {
     oxygen_supply_active = !oxygen_supply_active;
-    
+
     digitalWrite(PIN_OXYGEN_SUPPLY, oxygen_supply_active ? HIGH : LOW);
     value = oxygen_supply_active ? 0xFF : 0x00;
   }
@@ -288,7 +338,7 @@ void handle_commands_request(uint8_t package[])
   else if (cmd == _P_SWITCH_PROD_CO2)
   {
     prod_co2_active = !prod_co2_active;
-    
+
     digitalWrite(PIN_PROD_CO2, prod_co2_active ? HIGH : LOW);
     value = prod_co2_active ? 0xFF : 0x00;
   }
@@ -307,5 +357,57 @@ void handle_commands_request(uint8_t package[])
 
 void handle_time_request(uint8_t package[])
 {
+  uint8_t cmd = package[1];
+  uint32_t value = 0;
 
+  uint32_t given_value = (package[2] << 0) &
+                         (package[3] << 8) &
+                         (package[4] << 16) &
+                         (package[5] << 24);
+
+  if (cmd == _P_SET_TIME)
+  {
+    tmElements_t tm;
+    
+    tm.Second = given_value % 60;
+    tm.Minute = given_value / 60 % 60;
+    tm.Hour   = given_value / 3600 % 24;
+    tm.Day   = 1;
+    tm.Month = 1;
+    tm.Year  = 1970;
+    
+    RTC.write(tm);
+  }
+  else if (cmd == _P_SET_DAY_TIME)
+  {
+    time_day = given_value;
+    EEPROM.put(_MA_DAY_TIME, time_day);
+  }
+  else if (cmd == _P_SET_NIGHT_TIME)
+  {
+    time_night = given_value;
+    EEPROM.put(_MA_NIGHT_TIME, time_night);
+  }
+  else if (cmd == _P_GET_TIME)
+  {
+    tmElements_t tm;
+    RTC.read(tm);
+
+    value = (tm.Hour * 60 * 60) + (tm.Minute * 60) + tm.Second;
+  }
+  else if (cmd == _P_GET_DAY_TIME)
+  {
+    value = time_day;
+  }
+  else if (cmd == _P_GET_NIGHT_TIME)
+  {
+    value = time_night;
+  }
+  else
+  {
+    cmd = _P_UNKNOWN_CMD;
+    value = 0;
+  }
+
+  send_package(cmd, value);
 }
