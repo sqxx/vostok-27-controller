@@ -25,6 +25,7 @@
 */
 #define FLOAT_TO_INT(x) (((int) x) + ((((int)(x * 100)) % 100) >= 50 ? 1 : 0))
 
+#define IN_RANGE(x, l, h) (x >= l && x <= h)
 
 /* -- НАСТРОЙКИ --- */
 
@@ -40,8 +41,10 @@
 #define PIN_OXYGEN_SUPPLY     0
 #define PIN_PRES_RELIEF_VALVE 0
 
-#define MEM_DAY_TIME   0x00
-#define MEM_NIGHT_TIME (MEM_DAY_TIME + sizeof(uint32_t))
+#define _MA_STATE  0x00
+#define _MA_STATE_INITIALIZED 0xAABBCCDD
+#define _MA_DAY_TIME   (MEM_STATE + sizeof(uint32_t))
+#define _MA_NIGHT_TIME (MEM_DAY_TIME + sizeof(uint32_t))
 
 
 /* -- ПРОТОКОЛ --- */
@@ -90,6 +93,9 @@ MQ135 mq135(MQ135_PIN);
 DHT dht(DHT_PIN, DHT_TYPE);
 Barometer bar;
 
+bool prod_co2_active = false;
+bool oxygen_supply_active = false;
+bool pres_relief_valve_active = false;
 
 /* -- MAIN & LOOP --- */
 
@@ -99,7 +105,9 @@ void setup()
 
   send_package(_P_STARTUP, 0);
 
-  pinMode(13, OUTPUT);
+  pinMode(PIN_PROD_CO2, OUTPUT);
+  pinMode(PIN_OXYGEN_SUPPLY, OUTPUT);
+  pinMode(PIN_PRES_RELIEF_VALVE, OUTPUT);
 
   mq135.heaterPwrHigh();
   dht.begin();
@@ -191,6 +199,28 @@ uint16_t calculate_crc(uint8_t package[])
 void handle_request(uint8_t package[])
 {
   uint8_t cmd = package[1];
+
+  if (IN_RANGE(cmd, 0xA0, 0xAF))
+  {
+    handle_data_request(package);
+  }
+  else if (IN_RANGE(cmd, 0xB0, 0xBF))
+  {
+    handle_commands_request(package);
+  }
+  else if (IN_RANGE(cmd, 0xD0, 0xDF))
+  {
+    handle_commands_request(package);
+  }
+  else
+  {
+    send_package(_P_UNKNOWN_CMD, 0);
+  }
+}
+
+void handle_data_request(uint8_t package[])
+{
+  uint8_t cmd = package[1];
   uint32_t value = 0;
 
   if (cmd == _P_REQ_CO2)
@@ -213,6 +243,12 @@ void handle_request(uint8_t package[])
   {
     value = FLOAT_TO_INT(bar.readPressureMillibars());
   }
+  else if (cmd == _P_REQ_SOLAR_PANELS_EF)
+  {
+    uint16_t leftP = analogRead(PIN_SOLAR_PANEL_LEFT) * 100.0 / 1023.0;
+    uint16_t rightP = analogRead(PIN_SOLAR_PANEL_RIGHT) * 100.0 / 1023.0;
+    value = FLOAT_TO_INT(((leftP + rightP) / 2.0));
+  }
   else
   {
     cmd = _P_UNKNOWN_CMD;
@@ -220,4 +256,56 @@ void handle_request(uint8_t package[])
   }
 
   send_package(cmd, value);
+}
+
+void handle_commands_request(uint8_t package[])
+{
+  uint8_t cmd = package[1];
+  uint32_t value = 0;
+
+  if (cmd == _P_SWITCH_PRES_RELIEF_VALVE)
+  {
+    pres_relief_valve_active = !pres_relief_valve_active;
+    
+    digitalWrite(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active ? HIGH : LOW);
+    value = pres_relief_valve_active ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_STATUS_PRES_RELIEF_VALVE)
+  {
+    value = pres_relief_valve_active ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_SWITCH_OXYGEN_SUPPLY)
+  {
+    oxygen_supply_active = !oxygen_supply_active;
+    
+    digitalWrite(PIN_OXYGEN_SUPPLY, oxygen_supply_active ? HIGH : LOW);
+    value = oxygen_supply_active ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_STATUS_OXYGEN_SUPPLY)
+  {
+    value = oxygen_supply_active ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_SWITCH_PROD_CO2)
+  {
+    prod_co2_active = !prod_co2_active;
+    
+    digitalWrite(PIN_PROD_CO2, prod_co2_active ? HIGH : LOW);
+    value = prod_co2_active ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_SWITCH_PROD_CO2)
+  {
+    value = prod_co2_active ? 0xFF : 0x00;
+  }
+  else
+  {
+    cmd = _P_UNKNOWN_CMD;
+    value = 0;
+  }
+
+  send_package(cmd, value);
+}
+
+void handle_time_request(uint8_t package[])
+{
+
 }
