@@ -103,8 +103,9 @@ bool prod_co2_active = false;
 bool oxygen_supply_active = false;
 bool pres_relief_valve_active = false;
 
-uint32_t time_day = 0x00;
-uint32_t time_night = 0x00;
+uint32_t day_timestamp = 0;
+uint32_t night_timestamp = 0;
+bool light_active = false;
 
 /* -- MAIN & LOOP --- */
 
@@ -130,6 +131,8 @@ void setup()
 
 void loop()
 {
+  handle_time();
+  
   uint8_t package[PACKAGE_SIZE];
 
   uint16_t given_crc = 0;
@@ -185,8 +188,8 @@ void init_eeprom()
 
   if (crc == _MA_STATE_INITIALIZED)
   {
-    EEPROM.get(_MA_DAY_TIME, time_day);
-    EEPROM.get(_MA_NIGHT_TIME, time_night);
+    EEPROM.get(_MA_DAY_TIME, day_timestamp);
+    EEPROM.get(_MA_NIGHT_TIME, night_timestamp);
   }
   else
   {
@@ -213,6 +216,31 @@ void init_time()
     tm.Day   = 1;
     tm.Month = 1;
     tm.Year  = 1970;
+  }
+}
+
+void handle_time()
+{
+  tmElements_t tm;
+  RTC.read(tm);
+
+  int ts = (tm.Hour * 60 * 60) + (tm.Minute * 60) + tm.Second;
+
+  if (day_timestamp <= ts &&ts <= night_timestamp)
+  {
+    if (light_active)
+    {
+      digitalWrite(PIN_LIGHT, LOW);
+      light_active = false;
+    }
+  }
+  else
+  {   
+    if (!light_active)
+    {
+      digitalWrite(PIN_LIGHT, HIGH);
+      light_active = true;
+    }
   }
 }
 
@@ -380,13 +408,13 @@ void handle_time_request(uint8_t package[])
   }
   else if (cmd == _P_SET_DAY_TIME)
   {
-    time_day = given_value;
-    EEPROM.put(_MA_DAY_TIME, time_day);
+    day_timestamp = given_value;
+    EEPROM.put(_MA_DAY_TIME, day_timestamp);
   }
   else if (cmd == _P_SET_NIGHT_TIME)
   {
-    time_night = given_value;
-    EEPROM.put(_MA_NIGHT_TIME, time_night);
+    night_timestamp = given_value;
+    EEPROM.put(_MA_NIGHT_TIME, night_timestamp);
   }
   else if (cmd == _P_GET_TIME)
   {
@@ -397,11 +425,11 @@ void handle_time_request(uint8_t package[])
   }
   else if (cmd == _P_GET_DAY_TIME)
   {
-    value = time_day;
+    value = day_timestamp;
   }
   else if (cmd == _P_GET_NIGHT_TIME)
   {
-    value = time_night;
+    value = night_timestamp;
   }
   else
   {
