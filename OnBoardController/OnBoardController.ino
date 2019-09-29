@@ -163,15 +163,15 @@ void send_package(uint8_t cmd, uint32_t value)
   uint8_t package[PACKAGE_SIZE + 2] = {MAGIC_BYTE, cmd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0D};
   uint16_t crc = 0;
 
-  package[2] = value & 0x000000FF;
-  package[3] = value & 0x0000FF00;
-  package[4] = value & 0x00FF0000;
-  package[5] = value & 0xFF000000;
+  package[2] = (value & 0x000000FF) >> 0;
+  package[3] = (value & 0x0000FF00) >> 8;
+  package[4] = (value & 0x00FF0000) >> 16;
+  package[5] = (value & 0xFF000000) >> 24;
 
   crc = calculate_crc(package);
 
-  package[6] = value & 0x00FF;
-  package[7] = value & 0xFF00;
+  package[6] = (value & 0x00FF) >> 0;
+  package[7] = (value & 0xFF00) >> 8;
 
   Serial.write(package, PACKAGE_SIZE + 2);
 }
