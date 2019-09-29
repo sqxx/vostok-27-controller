@@ -10,7 +10,7 @@
 
 /* -- Библиотеки --- */
 
-#include <Wire.h>
+#include <EEPROM.h>
 #include <TroykaMQ.h>
 #include <TroykaIMU.h>
 #include <DHT.h>
@@ -29,11 +29,19 @@
 /* -- НАСТРОЙКИ --- */
 
 #define MQ135_PIN A0
-#define DHT_PIN   4
-
 #define MQ135_CALLIBRATION_DATA 77
 
+#define DHT_PIN  4
 #define DHT_TYPE DHT11
+
+#define PIN_SOLAR_PANEL_LEFT  A1
+#define PIN_SOLAR_PANEL_RIGHT A2
+#define PIN_PROD_CO2          0
+#define PIN_OXYGEN_SUPPLY     0
+#define PIN_PRES_RELIEF_VALVE 0
+
+#define MEM_DAY_TIME   0x00
+#define MEM_NIGHT_TIME (MEM_DAY_TIME + sizeof(uint32_t))
 
 
 /* -- ПРОТОКОЛ --- */
