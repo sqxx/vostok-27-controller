@@ -41,9 +41,9 @@
 #define PIN_SOLAR_PANEL_LEFT  A1
 #define PIN_SOLAR_PANEL_RIGHT A2
 
-#define PIN_PROD_CO2          0
-#define PIN_OXYGEN_SUPPLY     0
-#define PIN_PRES_RELIEF_VALVE 0
+#define PIN_PROD_CO2          5
+#define PIN_OXYGEN_SUPPLY     13
+#define PIN_PRES_RELIEF_VALVE 10
 
 #define PIN_LIGHT             0
 
@@ -118,6 +118,10 @@ void setup()
   pinMode(PIN_PROD_CO2, OUTPUT);
   pinMode(PIN_OXYGEN_SUPPLY, OUTPUT);
   pinMode(PIN_PRES_RELIEF_VALVE, OUTPUT);
+
+  digitalWrite(PIN_PROD_CO2, HIGH);
+  digitalWrite(PIN_OXYGEN_SUPPLY, HIGH);
+  digitalWrite(PIN_PRES_RELIEF_VALVE, HIGH);
 
   mq135.heaterPwrHigh();
   dht.begin();
@@ -247,7 +251,7 @@ void handle_time()
 void send_package(uint8_t cmd, uint32_t value)
 {
   uint8_t package[PACKAGE_SIZE + 2] = {MAGIC_BYTE, cmd, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x0D};
-  uint16_t crc = 0;
+  uint32_t crc = 0;
 
   package[2] = (value & 0x000000FF);
   package[3] = (value & 0x0000FF00) >> 8;
@@ -256,15 +260,15 @@ void send_package(uint8_t cmd, uint32_t value)
 
   crc = calculate_crc(package);
 
-  package[6] = (value & 0x00FF);
-  package[7] = (value & 0xFF00) >> 8;
+  package[6] = (crc & 0x00FF);
+  package[7] = (crc & 0xFF00) >> 8;
 
   Serial.write(package, PACKAGE_SIZE + 2);
 }
 
-uint16_t calculate_crc(uint8_t package[])
+uint32_t calculate_crc(uint8_t package[])
 {
-  uint16_t crc = 0;
+  uint32_t crc = 0;
 
   for (uint32_t i = 1; i < (PACKAGE_SIZE - 2); i++)
   {
@@ -345,7 +349,7 @@ void handle_commands_request(uint8_t package[])
   {
     pres_relief_valve_active = !pres_relief_valve_active;
 
-    digitalWrite(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active ? HIGH : LOW);
+    digitalWrite(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active ? LOW : HIGH);
     value = pres_relief_valve_active ? 0xFF : 0x00;
   }
   else if (cmd == _P_STATUS_PRES_RELIEF_VALVE)
@@ -356,7 +360,7 @@ void handle_commands_request(uint8_t package[])
   {
     oxygen_supply_active = !oxygen_supply_active;
 
-    digitalWrite(PIN_OXYGEN_SUPPLY, oxygen_supply_active ? HIGH : LOW);
+    digitalWrite(PIN_OXYGEN_SUPPLY, oxygen_supply_active ? LOW : HIGH);
     value = oxygen_supply_active ? 0xFF : 0x00;
   }
   else if (cmd == _P_STATUS_OXYGEN_SUPPLY)
