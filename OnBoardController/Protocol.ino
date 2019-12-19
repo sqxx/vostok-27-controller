@@ -1,11 +1,18 @@
 /* Protocol.ino
    Функции для реализации протокола Восток-27
-   
+
    Исходный код станции Восток-27
 */
 
 #include "Protocol.h"
 #include "Hardware.h"
+
+#define VALUE_BY_STATE(state) value = state ? 0xFF : 0x00;
+
+#define SWITCH(pin, var) var = !var;                 \
+                         if (var) RUN(pin);          \
+                         else     STOP(pin);         \
+                         value = var ? 0xFF : 0x00;  \
 
 
 /* --- ОСНОВНАЯ ЧАСТЬ --- */
@@ -62,7 +69,7 @@ uint16_t extract_crc(PACKAGE_TYPE package[])
 void handle_bad_package(PACKAGE_TYPE package[])
 {
   clear_broken_packages();
-  
+
   if (package[0] != START_MAGIC)
   {
     send_package(_PE_PACKAGE_ERR, _PE_PACKAGE_ERR_MAGIC);
@@ -88,22 +95,25 @@ void handle_request(PACKAGE_TYPE package[])
 {
   uint8_t cmd = package[1];
 
+  // Показатели датчиков
   if (IS_IN_RANGE_IN(cmd, 0xA0, 0xAF))
-  {
     handle_data_request(package);
-  }
+
+  // Выполнение команд
   else if (IS_IN_RANGE_IN(cmd, 0xB0, 0xBF))
-  {
     handle_commands_request(package);
-  }
+
+  // Состояние систем
+  else if (IS_IN_RANGE_IN(cmd, 0xC0, 0xCF))
+    handle_state_request(package);
+
+  // Настройки станции
   else if (IS_IN_RANGE_IN(cmd, 0xD0, 0xDF))
-  {
     handle_commands_request(package);
-  }
+
+  // Неизвестная команда
   else
-  {
     send_package(_PE_UNKNOWN_CMD, 0);
-  }
 }
 
 void handle_data_request(PACKAGE_TYPE package[])
@@ -121,8 +131,8 @@ void handle_data_request(PACKAGE_TYPE package[])
   }
   else if (cmd == _P_REQ_TEMP)
   {
-    float temp_lps331 = bar.readTemperatureC();
-    float temp_dht = dht.readTemperature();
+    float temp_lps331  = bar.readTemperatureC();
+    float temp_dht     = dht.readTemperature();
     float temp_average = (temp_lps331 + temp_dht) / 2.0;
 
     value = FLOAT_TO_INT(temp_average);
@@ -159,21 +169,21 @@ void handle_commands_request(PACKAGE_TYPE package[])
   uint8_t  cmd   = package[1];
   uint32_t value = 0;
 
-  if (cmd == _P_SWITCH_PRES_RELIEF_VALVE)
-  {
-    SWITCH(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active);
-  }
-  else if (cmd == _P_STATUS_PRES_RELIEF_VALVE)
-  {
-    value = pres_relief_valve_active ? 0xFF : 0x00;
-  }
-  else if (cmd == _P_SWITCH_PUMP_VALVE)
+  if (cmd == _P_SWITCH_PUMP_VALVE)
   {
     SWITCH(PIN_PUMP_VALVE, pump_valve_active);
   }
   else if (cmd == _P_STATUS_PUMP_VALVE)
   {
-    value = pump_valve_active ? 0xFF : 0x00;
+    VALUE_BY_STATE(pump_valve_active);
+  }
+  else if (cmd == _P_SWITCH_PRES_RELIEF_VALVE)
+  {
+    SWITCH(PIN_PRES_RELIEF_VALVE, pres_relief_valve_active);
+  }
+  else if (cmd == _P_STATUS_PRES_RELIEF_VALVE)
+  {
+    VALUE_BY_STATE(pres_relief_valve_active);
   }
   else if (cmd == _P_SWITCH_PROD_CO2)
   {
@@ -181,15 +191,59 @@ void handle_commands_request(PACKAGE_TYPE package[])
   }
   else if (cmd == _P_STATUS_PROD_CO2)
   {
-    value = prod_co2_active ? 0xFF : 0x00;
+    VALUE_BY_STATE(prod_co2_active);
+  }
+  else if (cmd == _P_SWITCH_CO2_NUTRALIZATION)
+  {
+    SWITCH(PIN_CO2_NUTRALIZATION, neut_co2_active);
+  }
+  else if (cmd == _P_STATUS_CO2_NUTRALIZATION)
+  {
+    VALUE_BY_STATE(neut_co2_active);
+  }
+  else if (cmd == _P_SWITCH_HEAT_MODULE)
+  {
+    SWITCH(PIN_HEAT_MODULE, heat_active);
+  }
+  else if (cmd == _P_STATUS_HEAT_MODULE)
+  {
+    VALUE_BY_STATE(heat_active);
+  }
+  else if (cmd == _P_SWITCH_FAN)
+  {
+    SWITCH(PIN_FAN, fan_active);
+  }
+  else if (cmd == _P_STATUS_FAN)
+  {
+    VALUE_BY_STATE(fan_active);
+  }
+  else if (cmd == _P_SWITCH_CAMERAS)
+  {
+    SWITCH(PIN_CAMERA_CONTROL, cameras_active);
+  }
+  else if (cmd == _P_STATUS_CAMERAS)
+  {
+    VALUE_BY_STATE(cameras_active);
+  }
+  else if (cmd == _P_SWITCH_AUTO_LIGHT)
+  {
+    auto_light_active = !auto_light_active;
+  }
+  else if (cmd == _P_STATUS_AUTO_LIGHT)
+  {
+    VALUE_BY_STATE(auto_light_active);
   }
   else
   {
     cmd = _PE_UNKNOWN_CMD;
-    value = 0;
   }
 
   send_package(cmd, value);
+}
+
+void handle_state_request(PACKAGE_TYPE package[])
+{
+  //todo
 }
 
 void handle_time_request(PACKAGE_TYPE package[])
@@ -248,3 +302,6 @@ void handle_time_request(PACKAGE_TYPE package[])
 
   send_package(cmd, value);
 }
+
+#undef SWITCH
+#undef VALUE_BY_STATE

@@ -12,10 +12,6 @@
 #define INIT_RELAY(pin) pinMode(pin, OUTPUT); \
                         STOP(pin);            \
 
-#define SWITCH(pin, var) var = !var;                 \
-                         if (var) RUN(pin);          \
-                         else     STOP(pin);         \
-                         value = var ? 0xFF : 0x00;  \
 
 
 bool first_start = true;
@@ -24,9 +20,13 @@ MQ135 mq135(MQ135_PIN);
 DHT   dht(DHT_PIN, DHT_TYPE);
 Barometer bar;
 
+bool pump_valve_active = false;
 bool pres_relief_valve_active = false;
-bool pump_valve_active   = false;
-bool prod_co2_active = false;
+bool prod_co2_active   = false;
+bool neut_co2_active   = false;
+bool heat_active       = false;
+bool fan_active        = false;
+bool cameras_active    = false;
 
 bool light_active = false;
 bool auto_light_active = true;
@@ -45,12 +45,13 @@ void setup()
 
   NOTIFY(_P_STARTUP);
 
-  INIT_RELAY(PIN_PRES_RELIEF_VALVE)  // Сброс давления
-  INIT_RELAY(PIN_LIGHT_CONTROL)      // Управление освещением
-  INIT_RELAY(PIN_PUMP_VALVE)         // Раздув станции
-  INIT_RELAY(PIN_HEAT_MODULE)        // Обогреватель
-  INIT_RELAY(PIN_CO2_NUTRALIZATION)  // Нейтрализатор CO2
-  INIT_RELAY(PIN_PROD_CO2)           // Генератор CO2    
+  INIT_RELAY(PIN_PRES_RELIEF_VALVE);  // Сброс давления
+  INIT_RELAY(PIN_CAMERA_CONTROL);     // Камеры
+  INIT_RELAY(PIN_PUMP_VALVE);         // Раздув станции
+  INIT_RELAY(PIN_CO2_NUTRALIZATION);  // Нейтрализация CO2
+  INIT_RELAY(PIN_HEAT_MODULE);        // Обогреватель
+  INIT_RELAY(PIN_FAN);                // Вентилятор
+  INIT_RELAY(PIN_PROD_CO2);           // Генератор CO2    
 
   // Блокировка блока реле
   pinMode(PIN_RELAY_BLOCK, OUTPUT);

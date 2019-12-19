@@ -1,6 +1,6 @@
 /* Protocol.h
    Макросы и определения для взаимодействия с внешним миром
-   
+
    Исходный код станции Восток-27
 */
 
@@ -51,7 +51,7 @@
 #define _P_SWITCH_FAN                0xBA  // Вентилятор обогревателя
 #define _P_STATUS_FAN                0xBB
 #define _P_SWITCH_CAMERAS            0xBC  // Камеры
-#define _P_STATUS_CAMERAS            0xBD  
+#define _P_STATUS_CAMERAS            0xBD
 #define _P_SWITCH_AUTO_LIGHT         0xBE  // Автоматическое управление освещением
 #define _P_STATUS_AUTO_LIGHT         0xBF
 
@@ -79,9 +79,9 @@
 /* --- МАКРОСЫ --- */
 
 #define PACKAGE_MARKERS_NOT_VALID(package) \
-    package[0]                != START_MAGIC || \
-    package[PACKAGE_SIZE - 2] != END_CR      || \
-    package[PACKAGE_SIZE - 1] != END_LF         \
+  package[0]                != START_MAGIC || \
+  package[PACKAGE_SIZE - 2] != END_CR      || \
+  package[PACKAGE_SIZE - 1] != END_LF         \
 
 #define NOTIFY(cmd) (send_package(cmd, 0))
 
