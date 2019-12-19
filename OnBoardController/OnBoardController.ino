@@ -50,9 +50,11 @@ void setup()
   INIT_RELAY(PIN_PUMP_VALVE)         // Раздув станции
   INIT_RELAY(PIN_HEAT_MODULE)        // Обогреватель
   INIT_RELAY(PIN_CO2_NUTRALIZATION)  // Нейтрализатор CO2
-  INIT_RELAY(PIN_PROD_CO2)           // Генератор CO2
+  INIT_RELAY(PIN_PROD_CO2)           // Генератор CO2    
 
-  INIT_RELAY(PIN_RELAY_BLOCK);       // Блокировка блока реле
+  // Блокировка блока реле
+  pinMode(PIN_RELAY_BLOCK, OUTPUT);
+  digitalWrite(PIN_RELAY_BLOCK, LOW);
 
   // Инициализация датчиков
   mq135.heaterPwrHigh();
@@ -130,7 +132,7 @@ void loop()
   // Снимаем блокировку блока реле
   if (first_start)
   {
-    RUN(PIN_RELAY_BLOCK);
+    digitalWrite(PIN_RELAY_BLOCK, HIGH);
     first_start = false;
   }
   
@@ -139,7 +141,7 @@ void loop()
   Serial.readBytes(package, PACKAGE_SIZE);
 
   // Проверка маркеров пакета (см. документацию)
-  if (PACKAGE_MARKERS_VALID(package))
+  if (PACKAGE_MARKERS_NOT_VALID(package))
   {
     handle_bad_package(package);
     return;
