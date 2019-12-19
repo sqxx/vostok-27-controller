@@ -13,8 +13,8 @@
 #define PACKAGE_TYPE uint8_t
 
 #define START_MAGIC  0xF4
-#define END_CR  0x0D
-#define END_LF  0x0A
+#define END_CR  0x0A
+#define END_LF  0x0D
 
 #define _P_STARTUP          0x01
 #define _P_INIT_COMPLETE    0x02
@@ -32,20 +32,28 @@
 #define _P_REQ_ENERGY_USAGE  0xA6  // Потребление станции
 #define _P_REQ_ENERGY_GEN    0xA7  // Генерация энергии
 
-#define _P_CODE_SUCCESS 0x00
-#define _P_CODE_FAILURE 0xFF
+#define _P_CODE_SUCCESS    0x00
+#define _P_CODE_FAILURE    0xFF
 
 #define _P_SYSTEM_ENABLED  0x00
 #define _P_SYSTEM_DISABLED 0xFF
 
-#define _P_SWITCH_PRES_RELIEF_VALVE  0xB1  // Переключить клапан сброса давления
-#define _P_STATUS_PRES_RELIEF_VALVE  0xB2  // Состояние клапана сброса давления
-#define _P_SWITCH_PUMP_VALVE  0xB3  // Переключить систему подачи кислорода
-#define _P_STATUS_PUMP_VALVE  0xB4  // Состояние системы подачи кислорода  
-#define _P_SWITCH_PROD_CO2    0xB5  // Переключить выработку углекислого газа
-#define _P_STATUS_PROD_CO2    0xB6  // Состояние системы выработки углекислого газ
-#define _P_SWITCH_AUTO_LIGHT  0xB7  // Переключить автоматическое управление освещением
-#define _P_STATUS_AUTO_LIGHT  0xB8  // Состояние автоматического переключения освещением
+#define _P_SWITCH_PUMP_VALVE         0xB0  // Клапан накачки станции
+#define _P_STATUS_PUMP_VALVE         0xB1
+#define _P_SWITCH_PRES_RELIEF_VALVE  0xB2  // Клапан сброса давления
+#define _P_STATUS_PRES_RELIEF_VALVE  0xB3
+#define _P_SWITCH_PROD_CO2           0xB4  // Выработка CO2
+#define _P_STATUS_PROD_CO2           0xB5
+#define _P_SWITCH_CO2_NUTRALIZATION  0xB6  // Нейтрализатор CO2
+#define _P_STATUS_CO2_NUTRALIZATION  0xB7
+#define _P_SWITCH_HEAT_MODULE        0xB8  // Обогреватель
+#define _P_STATUS_HEAT_MODULE        0xB9
+#define _P_SWITCH_FAN                0xBA  // Вентилятор обогревателя
+#define _P_STATUS_FAN                0xBB
+#define _P_SWITCH_CAMERAS            0xBC  // Камеры
+#define _P_STATUS_CAMERAS            0xBD  
+#define _P_SWITCH_AUTO_LIGHT         0xBE  // Автоматическое управление освещением
+#define _P_STATUS_AUTO_LIGHT         0xBF
 
 #define _P_SET_LIGHT  0xC1
 #define _P_GET_LIGHT  0xC2
@@ -59,8 +67,6 @@
 #define _P_SET_NIGHT_TIME  0xD3
 #define _P_GET_NIGHT_TIME  0xD6
 
-#define _P_SERIAL_RESET   0xEA  // Отчистка всего буфера Serial
-
 // PE - Protocol Exception
 #define _PE_PACKAGE_ERR 0xE1  // Некорректный пакет
 #define _PE_PACKAGE_CRC 0xE2  // Неверная контрольная сумма
@@ -72,10 +78,10 @@
 
 /* --- МАКРОСЫ --- */
 
-#define PACKAGE_MARKERS_VALID(package) \
+#define PACKAGE_MARKERS_NOT_VALID(package) \
     package[0]                != START_MAGIC || \
-    package[PACKAGE_SIZE - 2] != END_LF      || \
-    package[PACKAGE_SIZE - 1] != END_CR         \
+    package[PACKAGE_SIZE - 2] != END_CR      || \
+    package[PACKAGE_SIZE - 1] != END_LF         \
 
 #define NOTIFY(cmd) (send_package(cmd, 0))
 
