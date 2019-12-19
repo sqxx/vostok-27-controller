@@ -22,10 +22,11 @@
 #define PIN_ENERGY_USAGE       A4  // Ток потребления модулем
 
 #define PIN_PRES_RELIEF_VALVE  10  // Сброс давления
-#define PIN_LIGHT_CONTROL      9   // Управление освещением
+#define PIN_CAMERA_CONTROL     8   // Камеры
 #define PIN_PUMP_VALVE         7   // Раздув станции
-#define PIN_HEAT_MODULE        5   // Обогреватель
 #define PIN_CO2_NUTRALIZATION  6   // Нейтрализатор CO2
+#define PIN_HEAT_MODULE        5   // Обогреватель
+#define PIN_FAN                3   // Вентилятор обогревателя
 #define PIN_PROD_CO2           2   // Генератор CO2
 
 #define PIN_RELAY_BLOCK  14  // Разрешение работы блока реле
