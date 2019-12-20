@@ -43,7 +43,7 @@
 #define EEPROMV_STATE_INITIALIZED 0xAABBCCDD
 
 // Порог срабатывания автоматического регулирования давления
-#define PRESSURE_HIST 5
+#define PRESSURE_HIST 20
 
 
 /* --- МАКРОСЫ --- */

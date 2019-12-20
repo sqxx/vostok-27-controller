@@ -32,6 +32,7 @@ bool auto_light_active = true;
 uint32_t day_timestamp   = 0;
 uint32_t night_timestamp = 0;
 
+bool auto_pressure_balance = false;
 uint16_t normal_pressure = 1040;
 
 
@@ -168,19 +169,33 @@ void loop()
 // Управление давлением внутри купола
 void handle_pressure()
 {
+  if (!auto_pressure_balance) return;
+  
   uint16_t pressure = FLOAT_TO_INT(bar.readPressureMillibars());
+  
+  uint16_t min_pres = (normal_pressure - PRESSURE_HIST);
+  uint16_t max_pres = (normal_pressure + PRESSURE_HIST);
 
-  if (pressure > (normal_pressure + PRESSURE_HIST))
+  if (IS_IN_RANGE_IN(pressure, min_pres, max_pres))
   {
-    RUN(PIN_PRES_RELIEF_VALVE);
-    while (bar.readPressureMillibars() > (normal_pressure + PRESSURE_HIST));
-    STOP(PIN_PRES_RELIEF_VALVE);
-  }
-  else if (pressure < (normal_pressure - PRESSURE_HIST))
-  {
+    pump_valve_active = false;
+    pres_relief_valve_active = false;
+
     RUN(PIN_PUMP_VALVE);
-    while (bar.readPressureMillibars() < (normal_pressure - PRESSURE_HIST));
-    STOP(PIN_PUMP_VALVE);
+    RUN(PIN_PRES_RELIEF_VALVE);
+    
+    return;
+  }
+
+  if (pressure < min_pres)
+  {
+    pump_valve_active = true;
+    RUN(PIN_PUMP_VALVE);
+  }
+  else if (pressure > max_pres)
+  {
+    pres_relief_valve_active = true;
+    RUN(PIN_PRES_RELIEF_VALVE);
   }
 }
 

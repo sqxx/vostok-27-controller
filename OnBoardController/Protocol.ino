@@ -63,6 +63,14 @@ uint16_t extract_crc(PACKAGE_TYPE package[])
   return (high_byte << 8) | low_byte;
 }
 
+uint32_t extract_value(PACKAGE_TYPE package[])
+{
+  return (package[2] << 0)  &
+         (package[3] << 8)  &
+         (package[4] << 16) &
+         (package[5] << 24);
+}
+
 
 /* --- ОБРАБОТКА ИСКЛЮЧЕНИЙ --- */
 
@@ -100,12 +108,8 @@ void handle_request(PACKAGE_TYPE package[])
     handle_data_request(package);
 
   // Выполнение команд
-  else if (IS_IN_RANGE_IN(cmd, 0xB0, 0xBF))
+  else if (IS_IN_RANGE_IN(cmd, 0xB0, 0xCF))
     handle_commands_request(package);
-
-  // Состояние систем
-  else if (IS_IN_RANGE_IN(cmd, 0xC0, 0xCF))
-    handle_state_request(package);
 
   // Настройки станции
   else if (IS_IN_RANGE_IN(cmd, 0xD0, 0xDF))
@@ -228,10 +232,20 @@ void handle_commands_request(PACKAGE_TYPE package[])
   else if (cmd == _P_SWITCH_AUTO_LIGHT)
   {
     auto_light_active = !auto_light_active;
+    value = auto_light_active ? 0xFF : 0x00;
   }
   else if (cmd == _P_STATUS_AUTO_LIGHT)
   {
     VALUE_BY_STATE(auto_light_active);
+  }
+  else if (cmd == _P_SWITCH_AUTO_PRES)
+  {
+    auto_pressure_balance = !auto_pressure_balance;
+    value = auto_pressure_balance ? 0xFF : 0x00;
+  }
+  else if (cmd == _P_STATUS_AUTO_PRES)
+  {
+    VALUE_BY_STATE(auto_pressure_balance);
   }
   else
   {
@@ -241,20 +255,12 @@ void handle_commands_request(PACKAGE_TYPE package[])
   send_package(cmd, value);
 }
 
-void handle_state_request(PACKAGE_TYPE package[])
-{
-  //todo
-}
-
 void handle_time_request(PACKAGE_TYPE package[])
 {
   uint8_t  cmd   = package[1];
   uint32_t value = 0;
 
-  uint32_t given_value = (package[2] << 0)  &
-                         (package[3] << 8)  &
-                         (package[4] << 16) &
-                         (package[5] << 24);
+  uint32_t given_value = extract_value(package);
 
   if (cmd == _P_SET_TIME)
   {
@@ -293,6 +299,14 @@ void handle_time_request(PACKAGE_TYPE package[])
   else if (cmd == _P_GET_NIGHT_TIME)
   {
     value = night_timestamp;
+  }
+  else if (cmd == _P_SET_LIGHT)
+  {
+    analogWrite(PIN_LIGHT, map(extract_value(package), 0, 100, 0, 255));
+  }
+  else if (cmd == _P_GET_LIGHT)
+  {
+    value = map(analogRead(PIN_LIGHT), 0, 255, 0, 100);
   }
   else
   {
