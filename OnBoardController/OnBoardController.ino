@@ -12,8 +12,6 @@
 #define INIT_RELAY(pin) pinMode(pin, OUTPUT); \
                         STOP(pin);            \
 
-
-
 bool first_start = true;
 
 MQ135 mq135(MQ135_PIN);
@@ -33,6 +31,8 @@ bool auto_light_active = true;
 
 uint32_t day_timestamp   = 0;
 uint32_t night_timestamp = 0;
+
+uint16_t normal_pressure = 1040;
 
 
 /* -- ИНИЦИАЛИЗАЦИЯ --- */
@@ -117,6 +117,9 @@ void loop()
   uint16_t package_crc = 0;
   uint16_t calc_crc    = 0;
 
+  // Управление давление
+  handle_pressure();
+
   // Управление освещением
   handle_light();
 
@@ -160,6 +163,25 @@ void loop()
 
   // Обрабатываем запрос
   handle_request(package);
+}
+
+// Управление давлением внутри купола
+void handle_pressure()
+{
+  uint16_t pressure = FLOAT_TO_INT(bar.readPressureMillibars());
+
+  if (pressure > (normal_pressure + PRESSURE_HIST))
+  {
+    RUN(PIN_PRES_RELIEF_VALVE);
+    while (bar.readPressureMillibars() > (normal_pressure + PRESSURE_HIST));
+    STOP(PIN_PRES_RELIEF_VALVE);
+  }
+  else if (pressure < (normal_pressure - PRESSURE_HIST))
+  {
+    RUN(PIN_PUMP_VALVE);
+    while (bar.readPressureMillibars() < (normal_pressure - PRESSURE_HIST));
+    STOP(PIN_PUMP_VALVE);
+  }
 }
 
 // Управление освещением на станции

@@ -35,11 +35,15 @@
 
 // Адреса в памяти для хранения настроек
 #define EEPROMA_STATE      0x00
-#define EEPROMA_DAY_TIME   (EEPROMA_STATE    + sizeof(uint32_t))
-#define EEPROMA_NIGHT_TIME (EEPROMA_DAY_TIME + sizeof(uint32_t))
+#define EEPROMA_DAY_TIME   (EEPROMA_STATE      + sizeof(uint32_t))
+#define EEPROMA_NIGHT_TIME (EEPROMA_DAY_TIME   + sizeof(uint32_t))
+#define EEPROMA_PRESSURE   (EEPROMA_NIGHT_TIME + sizeof(uint16_t))
 
 // Ключевое значение, для проверки инициализации EEPROM памяти
 #define EEPROMV_STATE_INITIALIZED 0xAABBCCDD
+
+// Порог срабатывания автоматического регулирования давления
+#define PRESSURE_HIST 5
 
 
 /* --- МАКРОСЫ --- */
