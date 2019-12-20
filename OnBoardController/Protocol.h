@@ -54,18 +54,20 @@
 #define _P_STATUS_CAMERAS            0xBD
 #define _P_SWITCH_AUTO_LIGHT         0xBE  // Автоматическое управление освещением
 #define _P_STATUS_AUTO_LIGHT         0xBF
-
-#define _P_SET_LIGHT  0xC1
-#define _P_GET_LIGHT  0xC2
+#define _P_SWITCH_AUTO_PRES          0xC1  // Автоматическое поддержка давления
+#define _P_STATUS_AUTO_PRES          0xC2
 
 #define _P_SET_TIME   0xD1
-#define _P_GET_TIME   0xD4
+#define _P_GET_TIME   0xDA
 
 #define _P_SET_DAY_TIME    0xD2
-#define _P_GET_DAY_TIME    0xD5
+#define _P_GET_DAY_TIME    0xDB
 
 #define _P_SET_NIGHT_TIME  0xD3
-#define _P_GET_NIGHT_TIME  0xD6
+#define _P_GET_NIGHT_TIME  0xDC
+
+#define _P_SET_LIGHT  0xD4
+#define _P_GET_LIGHT  0xDD
 
 // PE - Protocol Exception
 #define _PE_PACKAGE_ERR 0xE1  // Некорректный пакет
